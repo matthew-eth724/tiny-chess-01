@@ -37,6 +37,7 @@ for t in range(1, 7):
     PST[t] = w
     PST[t + 8] = bl
 
+
 TT = {}
 KILL = [[0, 0] for _ in range(64)]
 HIST = [[0] * 128 for _ in range(128)]
@@ -73,7 +74,7 @@ def pf(fen):
     if f[3] != "-":
         ep = (ord(f[3][0]) - 97) + (int(f[3][1]) - 1) * 16
     return b, side, ca, ep
-def attacked(b, sq, by):
+def atk(b, sq, by):
     lo = by * 8
     for o in DIAG:
         s = sq + o
@@ -209,17 +210,17 @@ class Pos:
         o = []
         if side == 0 and sq == 4:
             if self.castle & 1 and not b[5] and not b[6] and b[7] == R and \
-                    not attacked(b, 4, e) and not attacked(b, 5, e) and not attacked(b, 6, e):
+                    not atk(b, 4, e) and not atk(b, 5, e) and not atk(b, 6, e):
                 o.append((4, 6, 0))
             if self.castle & 2 and not b[3] and not b[2] and not b[1] and b[0] == R and \
-                    not attacked(b, 4, e) and not attacked(b, 3, e) and not attacked(b, 2, e):
+                    not atk(b, 4, e) and not atk(b, 3, e) and not atk(b, 2, e):
                 o.append((4, 2, 0))
         elif side == 1 and sq == 116:
             if self.castle & 4 and not b[117] and not b[118] and b[119] == R + 8 and \
-                    not attacked(b, 116, e) and not attacked(b, 117, e) and not attacked(b, 118, e):
+                    not atk(b, 116, e) and not atk(b, 117, e) and not atk(b, 118, e):
                 o.append((116, 118, 0))
             if self.castle & 8 and not b[115] and not b[114] and not b[113] and b[112] == R + 8 and \
-                    not attacked(b, 116, e) and not attacked(b, 115, e) and not attacked(b, 114, e):
+                    not atk(b, 116, e) and not atk(b, 115, e) and not atk(b, 114, e):
                 o.append((116, 114, 0))
         return o
 
@@ -344,7 +345,7 @@ class Pos:
     def legal(self):
         for m in self.moves():
             self.make(m)
-            ok = not attacked(self.b, self.king[self.side ^ 1], self.side)
+            ok = not atk(self.b, self.king[self.side ^ 1], self.side)
             self.unmake()
             if ok:
                 return m
@@ -353,14 +354,13 @@ class Pos:
 
 def sm(p, mv, ply, tt):
     b, hs = p.b, HIST
-    k0, k1 = KILL[ply] if ply < 64 else (0, 0)
+    k0, k1 = KILL[ply] if ply < 64 else KILL[63]
 
     def key(m):
         fr, to, pr = m
         c = b[to]
         s = (10 * VAL[c] - VAL[b[fr]]) if c else (8 * VAL[pr] if pr else 0)
-        s += 5000 if m == k0 else (4000 if m == k1 else 0)
-        return (1 << 20) if m == tt else s + hs[fr][to]
+        return (1 << 20) if m == tt else s + hs[fr][to] + (5000 if m == k0 else 4000 if m == k1 else 0)
     mv.sort(key=key, reverse=True)
     return mv
 
@@ -375,7 +375,7 @@ def qsearch(p, a, b, ply):
         a = st
     for m in sm(p, p.moves(True), ply, None):
         p.make(m)
-        if attacked(p.b, p.king[p.side ^ 1], p.side):
+        if atk(p.b, p.king[p.side ^ 1], p.side):
             p.unmake()
             continue
         sc = -qsearch(p, -b, -a, ply + 1)
@@ -400,7 +400,7 @@ def search(p, d, a, b, ply, null=True):
         f, v, hd, tm = hit
         if hd >= d and (f == 0 or (f == 1 and v >= b) or (f == 2 and v <= a)):
             return v
-    chk = attacked(p.b, p.king[p.side], p.side ^ 1)
+    chk = atk(p.b, p.king[p.side], p.side ^ 1)
     if null and not chk and d >= 3 and ply:
         p.make_null()
         sc = -search(p, d - 3, -b, -b + 1, ply + 1, False)
@@ -413,15 +413,17 @@ def search(p, d, a, b, ply, null=True):
     lg = 0
     best = -INF
     bm = None
+    a0 = a
     sm(p, mv, ply, tm)
     for m in mv:
+        cap = p.b[m[1]] or m[2]
         p.make(m)
-        if attacked(p.b, p.king[p.side ^ 1], p.side):
+        if atk(p.b, p.king[p.side ^ 1], p.side):
             p.unmake()
             continue
         lg += 1
         red = 0
-        if d >= 3 and lg > 3 and not p.b[m[1]] and not chk and not m[2]:
+        if d >= 3 and lg > 3 and not cap and not chk:
             red = 1 if lg < 8 else 2
         if lg == 1:
             sc = -search(p, d - 1, -b, -a, ply + 1)
@@ -437,23 +439,23 @@ def search(p, d, a, b, ply, null=True):
         if sc > a:
             a = sc
         if a >= b:
-            if not m[2]:
+            if not cap:
                 if ply < 64 and KILL[ply][0] != m:
                     KILL[ply][1], KILL[ply][0] = KILL[ply][0], m
                 HIST[m[0]][m[1]] += d * d
             break
     if not lg:
         return -MATE + ply if chk else 0
-    TT[p.h] = (2 if best <= a else (1 if best >= b else 0), best, d, bm)
+    TT[p.h] = (2 if best <= a0 else 1 if best >= b else 0, best, d, bm)
     return best
 
 
-def pick(fen, nb):
+def pick(f, nb):
     global NODES, LIMIT, ABORT
     NODES = 0
     LIMIT = nb
     ABORT = False
-    p = Pos(*pf(fen))
+    p = Pos(*pf(f))
     bm = None
     for d in range(1, 40):
         sc = search(p, d, -INF, INF, 0)
@@ -467,7 +469,7 @@ def pick(fen, nb):
 BG = "abcdefgh"
 
 
-def uci(m):
+def uc(m):
     return (BG[m[0] & 7] + str((m[0] >> 4) + 1) + BG[m[1] & 7]
             + str((m[1] >> 4) + 1) + ("nbrq"[m[2] - 2] if m[2] else ""))
 
@@ -476,6 +478,8 @@ def post(p, body):
     r = urllib.request.Request(ENV + p, data=json.dumps(body).encode(),
                                headers={"content-type": "application/json"})
     return json.load(urllib.request.urlopen(r))
+
+
 def main():
     nb = int(os.environ.get("MAKEFUN_NODES", "60000"))
     while True:
@@ -483,10 +487,8 @@ def main():
         if g["status"] == "done":
             break
         while g["status"] == "your_move":
-            mv = uci(pick(g["fen"], nb))
-            if mv not in g["legal_moves"]:
-                mv = g["legal_moves"][0]
-            g = post("/move", {"game": g["game"], "move": mv})
+            mv = uc(pick(g["fen"], nb))
+            g = post("/move", {"game": g["game"], "move": mv if mv in g["legal_moves"] else g["legal_moves"][0]})
 ENV = os.environ.get("MAKEFUN_ENV_URL")
 if ENV:
     main()
