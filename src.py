@@ -341,6 +341,15 @@ class Pos:
         sc += 25 * ((bis[0] > 1) - (bis[1] > 1))
         return sc if self.side == 0 else -sc
 
+    def legal(self):
+        for m in self.moves():
+            self.make(m)
+            ok = not attacked(self.b, self.king[self.side ^ 1], self.side)
+            self.unmake()
+            if ok:
+                return m
+        return None
+
 
 def sm(p, mv, ply, tt):
     b, hs = p.b, HIST
@@ -453,21 +462,19 @@ def pick(fen, nb):
             bm = h[3]
         if ABORT or sc > MATE - 200:
             break
-    if bm is None:
-        lg = p.legal()
-        bm = lg[0] if lg else None
-    return bm
+    return bm if bm else p.legal()
 
 BG = "abcdefgh"
 
 
 def uci(m):
     return BG[m[0] & 7] + str((m[0] >> 4) + 1) + BG[m[1] & 7] + str((m[1] >> 4) + 1) + " nbrqk"[m[2]]
+
+
 def post(p, body):
     r = urllib.request.Request(ENV + p, data=json.dumps(body).encode(),
                                headers={"content-type": "application/json"})
-    with urllib.request.urlopen(r) as z:
-        return json.load(z)
+    return json.load(urllib.request.urlopen(r))
 def main():
     nb = int(os.environ.get("MAKEFUN_NODES", "400000"))
     while True:
@@ -475,10 +482,8 @@ def main():
         if g["status"] == "done":
             break
         while g["status"] == "your_move":
-            try:
-                mv = uci(pick(g["fen"], nb))
-                assert mv in g["legal_moves"]
-            except Exception:
+            mv = uci(pick(g["fen"], nb))
+            if mv not in g["legal_moves"]:
                 mv = g["legal_moves"][0]
             g = post("/move", {"game": g["game"], "move": mv})
 ENV = os.environ.get("MAKEFUN_ENV_URL")
