@@ -319,7 +319,6 @@ class Pos:
     def evaluate(self):
         b = self.b
         sc = np = 0
-        bis = [0, 0]
         sq = 0
         while sq < 128:
             if sq & 0x88:
@@ -331,15 +330,12 @@ class Pos:
                 if t != K:
                     if t != P:
                         np += VAL[t]
-                    if t == B:
-                        bis[pc >> 3] += 1
                 sc += PST[pc][sq]
             sq += 1
         ph = np if np < 6200 else 6200
         kw, kb = self.king
         sc += (PST[6][kw] * ph + KEG[0][kw] * (6200 - ph)) // 6200
         sc -= (PST[14][kb] * ph + KEG[1][kb] * (6200 - ph)) // 6200
-        sc += 25 * ((bis[0] > 1) - (bis[1] > 1))
         return sc if self.side == 0 else -sc
 
     def legal(self):
@@ -455,6 +451,8 @@ def pick(f, nb):
     NODES = 0
     LIMIT = nb
     ABORT = False
+    if len(TT) > 300000:
+        TT.clear()
     p = Pos(*pf(f))
     bm = None
     for d in range(1, 40):
