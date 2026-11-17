@@ -52,7 +52,7 @@ ZC = [_r.getrandbits(64) for _ in range(16)]
 ZE = [_r.getrandbits(64) for _ in range(128)]
 
 
-def parse_fen(fen):
+def pf(fen):
     b = [0] * 128
     f = fen.split()
     r, fl = 7, 0
@@ -453,7 +453,7 @@ def pick(fen, nb):
     NODES = 0
     LIMIT = nb
     ABORT = False
-    p = Pos(*parse_fen(fen))
+    p = Pos(*pf(fen))
     bm = None
     for d in range(1, 40):
         sc = search(p, d, -INF, INF, 0)
@@ -468,7 +468,8 @@ BG = "abcdefgh"
 
 
 def uci(m):
-    return BG[m[0] & 7] + str((m[0] >> 4) + 1) + BG[m[1] & 7] + str((m[1] >> 4) + 1) + " nbrqk"[m[2]]
+    return (BG[m[0] & 7] + str((m[0] >> 4) + 1) + BG[m[1] & 7]
+            + str((m[1] >> 4) + 1) + ("nbrq"[m[2] - 2] if m[2] else ""))
 
 
 def post(p, body):
