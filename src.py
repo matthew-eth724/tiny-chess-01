@@ -479,7 +479,7 @@ def post(p, body):
 
 
 def main():
-    nb = int(os.environ.get("MAKEFUN_NODES", "60000"))
+    nb = int(os.environ.get("MAKEFUN_NODES", "100000"))
     while True:
         g = post("/game", {})
         if g["status"] == "done":
