@@ -477,7 +477,7 @@ def post(p, body):
                                headers={"content-type": "application/json"})
     return json.load(urllib.request.urlopen(r))
 def main():
-    nb = int(os.environ.get("MAKEFUN_NODES", "400000"))
+    nb = int(os.environ.get("MAKEFUN_NODES", "60000"))
     while True:
         g = post("/game", {})
         if g["status"] == "done":
