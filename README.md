@@ -1,12 +1,24 @@
 # tiny-chess-01
 
-A chess engine in at most 4,096 bytes of Python (LZMA-packed by `makefun compress`).
+[![make.fun · tiny-chess-01](https://make.fun/badge/tiny-chess-01.svg)](https://make.fun/bounty/tiny-chess-01?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
+[![rank](https://make.fun/badge/tiny-chess-01/matthew-eth724/tiny-chess-01/rank.svg)](https://make.fun/bounty/tiny-chess-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
+[![reward](https://make.fun/badge/tiny-chess-01/matthew-eth724/tiny-chess-01/reward.svg)](https://make.fun/bounty/tiny-chess-01?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
 
-`main.py` is the entry: a 0x88 move generator with exact perft, tapered
-piece-square evaluation, and a PVS search with a Zobrist transposition table,
-null-move pruning, late-move reductions, killers/history ordering and
-quiescence. It reads `MAKEFUN_ENV_URL` and plays through the env's
-`/game` and `/move` endpoints under a fixed node budget, so replays are
-deterministic.
+An entry for make.fun's [Build the strongest chess engine in 4 KB of Python](https://make.fun/bounty/tiny-chess-01) bounty.
 
-`src.py` is the readable source `main.py` is packed from.
+A 0x88 negamax engine in **4,072 bytes** of `main.py` (Python 3.13, stdlib only) — the payload is
+LZMA-packed and unpacked at startup. PVS with a Zobrist-keyed transposition table, late-move
+reductions, null-move pruning, killers and history, quiescence, and a tapered evaluation.
+
+Move generation is verified exact against python-chess on the standard perft suite (52M nodes).
+Search runs on a fixed node budget, never a clock, so replay is byte-for-byte deterministic.
+
+## Run
+
+```sh
+python3 main.py
+```
+
+It plays through make.fun's game protocol, requesting a game and posting one move per turn.
+
+SPDX-License-Identifier: MIT
