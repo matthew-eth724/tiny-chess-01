@@ -330,12 +330,12 @@ class Pos:
                 if t != K:
                     if t != P:
                         np += VAL[t]
-                sc += PST[pc][sq]
+                    sc += PST[pc][sq]
             sq += 1
         ph = np if np < 6200 else 6200
         kw, kb = self.king
-        sc += (PST[6][kw] * ph + KEG[0][kw] * (6200 - ph)) // 6200
-        sc -= (PST[14][kb] * ph + KEG[1][kb] * (6200 - ph)) // 6200
+        sc += (PST[6][kw] * ph + KEG[0][kw] * (6200 - ph) + 3100) // 6200
+        sc += (PST[14][kb] * ph + KEG[1][kb] * (6200 - ph) + 3100) // 6200
         return sc if self.side == 0 else -sc
 
     def legal(self):
