@@ -1,1 +1,4 @@
+src.py
 __pycache__/
+*.pyc
+dev/
